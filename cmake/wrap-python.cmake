@@ -22,6 +22,9 @@ function(wrap_python library_name sources)
     set_target_properties(${library_name}Python PROPERTIES SUFFIX ".pyd")
   endif(WIN32 AND NOT CYGWIN)
 
+  # mfallon: necessary? I think not
+  #set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib/python2.7/site-packages")
+
   install(TARGETS ${library_name}Python DESTINATION lib/python2.7/site-packages)
   install(TARGETS ${library_name}PythonD DESTINATION lib)
 
