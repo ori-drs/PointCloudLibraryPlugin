@@ -25,7 +25,7 @@ def appendPolyData(*polyData):
 
     append = vtkAppendPolyData()
     for p in polyData:
-        append.AddInput(p)
+        append.AddInputData(p)
     append.Update()
     return append.GetOutput()
 
@@ -43,7 +43,7 @@ f = vtkPCLEuclideanClusterExtraction()
 f.SetMinClusterSize(1)
 f.SetMaxClusterSize(10000)
 f.SetClusterTolerance(0.9)
-f.SetInput(points)
+f.SetInputData(points)
 
 
 def getRange():
@@ -73,7 +73,7 @@ assert(getRange() == (0.0, 0.0))
 plane = getPlane(normal=[1,0,0], origin=[10,0,0])
 
 f = vtkPCLSACSegmentationPlane()
-f.SetInput(plane)
+f.SetInputData(plane)
 f.Update()
 
 print 'plane origin', f.GetPlaneOrigin()

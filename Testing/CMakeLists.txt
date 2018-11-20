@@ -5,7 +5,7 @@ set(python_tests
 set(python_test args
 )
 
-set(vtkpython_exe ${ParaView_BINARY_DIR}/bin/vtkpython)
+set(vtkpython_exe /usr/bin/vtk6python)
 
 macro(add_python_test name)
   get_filename_component(base_name ${name} NAME_WE)
