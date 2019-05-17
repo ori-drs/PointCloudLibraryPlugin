@@ -109,7 +109,6 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPCDFile(const std::s
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud)
 {
-  std::cout <<  cloud->sensor_origin_ << " is origin v2\n";
   pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
   pcl::transformPointCloud (*cloud, *transformed_cloud, cloud->sensor_origin_.block<3,1>(0,0), cloud->sensor_orientation_);
 
@@ -154,7 +153,6 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud)
 {
-  std::cout <<  cloud->sensor_origin_ << " is origin v2\n";
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
   pcl::transformPointCloud (*cloud, *transformed_cloud, cloud->sensor_origin_.block<3,1>(0,0), cloud->sensor_orientation_);
 
@@ -211,7 +209,6 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud)
 {
-  std::cout <<  cloud->sensor_origin_ << " is origin v2\n";
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZRGBA> ());
   pcl::transformPointCloud (*cloud, *transformed_cloud, cloud->sensor_origin_.block<3,1>(0,0), cloud->sensor_orientation_);
 
