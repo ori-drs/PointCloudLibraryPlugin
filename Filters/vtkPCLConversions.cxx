@@ -64,46 +64,95 @@ vtkSmartPointer<vtkPolyData> TemplatedPolyDataFromPCDFile(const std::string& fil
 
 
 //----------------------------------------------------------------------------
+
+/**
+ * @brief The PointCloudFieldIterator class is used to iterate through a PCLPointCloud2
+ */
+class PointCloudFieldIterator
+{
+public:
+  PointCloudFieldIterator(pcl::PCLPointCloud2& cloud, const std::string& field_name)
+  {
+    for (size_t i = 0; i < cloud.fields.size(); ++i)
+    {
+      if(cloud.fields[i].name == field_name)
+      {
+        int offset = cloud.fields[i].offset;
+        data_char_ = &(cloud.data.front()) + offset;
+        data_ = reinterpret_cast<float*>(data_char_);
+        point_step_ = cloud.point_step;
+        return;
+      }
+    }
+    throw std::runtime_error("Field " + field_name + " does not exist");
+
+  }
+
+  PointCloudFieldIterator& operator ++()
+  {
+    data_char_ += point_step_;
+    data_ = reinterpret_cast<float*>(data_char_);
+  }
+
+  float& operator*()
+  {
+    return *data_;
+  }
+
+private:
+  unsigned char* data_char_;
+  float* data_;
+  int point_step_;
+};
+
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPCDFile(const std::string& filename)
 {
-
-  int version;
-  int type;
-  Eigen::Vector4f origin;
-  Eigen::Quaternionf orientation;
   pcl::PCDReader reader;
-
-#if PCL_VERSION_COMPARE(<,1,6,0)
-
-  int idx;
-  sensor_msgs::PointCloud2 cloud;
-  reader.readHeader(filename, cloud, origin, orientation, version, type, idx);
-
-#elif PCL_VERSION_COMPARE(<,1,7,0)
-
-  unsigned int idx;
-  int offset = 0;
-  sensor_msgs::PointCloud2 cloud;
-  reader.readHeader(filename, cloud, origin, orientation, version, type, idx, offset);
-
-#else
-
-  unsigned int idx;
-  int offset = 0;
   pcl::PCLPointCloud2 cloud;
-  reader.readHeader(filename, cloud, origin, orientation, version, type, idx, offset);
+  reader.read(filename, cloud);
+  return ConvertPointCloud2ToVtk(cloud);
+}
 
-#endif
+vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCLPointCloud2& cloud)
+{
+  const size_t numberOfPoints = cloud.height*cloud.width;
 
-  if (pcl::getFieldIndex(cloud, "rgba") != -1) {
-    return TemplatedPolyDataFromPCDFile<pcl::PointXYZRGBA>(filename);
+  vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+  points->SetDataTypeToFloat();
+  points->Allocate(numberOfPoints);
+  polyData->SetPoints(points);
+  polyData->SetVerts(NewVertexCells(numberOfPoints));
+
+  for (size_t i = 0; i < cloud.fields.size(); ++i)
+  {
+    std::string field_name = cloud.fields[i].name;
+    if (field_name == "y" || field_name == "z")
+      continue;
+
+    if (field_name == "x")
+    {
+      PointCloudFieldIterator iter(cloud, field_name);
+      for (size_t j = 0; j < numberOfPoints; ++j, ++iter)
+      {
+        points->InsertNextPoint(&(*iter));
+      }
+    } else
+    {
+      vtkSmartPointer<vtkFloatArray> field = vtkSmartPointer<vtkFloatArray>::New();
+      field->SetName(field_name.c_str());
+      field->SetNumberOfValues(numberOfPoints);
+      polyData->GetPointData()->AddArray(field);
+      PointCloudFieldIterator iter(cloud, field_name);
+      for (size_t j = 0; j < numberOfPoints; ++j, ++iter)
+      {
+        field->SetValue(j, *iter);
+      }
+    }
+
   }
-  else if (pcl::getFieldIndex(cloud, "rgb") != -1) {
-    return TemplatedPolyDataFromPCDFile<pcl::PointXYZRGB>(filename);
-  }
-  else {
-    return TemplatedPolyDataFromPCDFile<pcl::PointXYZ>(filename);
-  }
+
+  return polyData;
 }
 
 //----------------------------------------------------------------------------

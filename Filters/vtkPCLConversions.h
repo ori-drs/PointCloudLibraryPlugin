@@ -47,6 +47,8 @@ public:
 
   static vtkSmartPointer<vtkPolyData> PolyDataFromPCDFile(const std::string& filename);
 
+  static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2 &cloud);
+
   static vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(
     pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud);
 

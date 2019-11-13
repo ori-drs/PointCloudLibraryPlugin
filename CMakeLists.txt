@@ -13,6 +13,7 @@ find_package(catkin  REQUIRED COMPONENTS pcl_ros)
 find_package(VTK REQUIRED)
 
 catkin_package(
+INCLUDE_DIRS Filters
 )
 
 include(${VTK_USE_FILE})
