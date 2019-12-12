@@ -26,6 +26,7 @@
 #include <vtkFloatArray.h>
 #include <vtkIntArray.h>
 #include <vtkPointData.h>
+#include <vtkTransformPolyDataFilter.h>
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/transforms.h>
@@ -109,8 +110,35 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPCDFile(const std::s
 {
   pcl::PCDReader reader;
   pcl::PCLPointCloud2 cloud;
+
+  int version;
+  int type;
+  Eigen::Vector4f origin;
+  Eigen::Quaternionf orientation;
+
+#if PCL_VERSION_COMPARE(<,1,6,0)
+
+  int idx;
+  sensor_msgs::PointCloud2 cloud;
+  reader.readHeader(filename, cloud, origin, orientation, version, type, idx);
+
+#elif PCL_VERSION_COMPARE(<,1,7,0)
+
+  unsigned int idx;
+  int offset = 0;
+  sensor_msgs::PointCloud2 cloud;
+  reader.readHeader(filename, cloud, origin, orientation, version, type, idx, offset);
+
+#else
+
+  unsigned int idx;
+  int offset = 0;
+  reader.readHeader(filename, cloud, origin, orientation, version, type, idx, offset);
+
+#endif
+
   reader.read(filename, cloud);
-  return ConvertPointCloud2ToVtk(cloud);
+  return ConvertPointCloud2ToVtk(cloud, origin, orientation);
 }
 
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCLPointCloud2& cloud)
@@ -127,6 +155,7 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCL
   for (size_t i = 0; i < cloud.fields.size(); ++i)
   {
     std::string field_name = cloud.fields[i].name;
+    //points (x,y,z) are read from the x field only so y and z can be ignored
     if (field_name == "y" || field_name == "z")
       continue;
 
@@ -155,6 +184,43 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCL
   return polyData;
 }
 
+
+vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCLPointCloud2& cloud,
+                                                                        const Eigen::Vector4f& origin,
+                                                                        const Eigen::Quaternionf& orientation)
+{
+  vtkSmartPointer<vtkPolyData> polyData = ConvertPointCloud2ToVtk(cloud);
+
+  // transform polydata
+  vtkSmartPointer<vtkTransform> transform = convertTransform(origin, orientation);
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  transformFilter->SetTransform(transform);
+  transformFilter->SetInputData(polyData);
+  transformFilter->Update();
+  polyData->DeepCopy(transformFilter->GetOutput());
+
+  return polyData;
+}
+
+vtkSmartPointer<vtkTransform> vtkPCLConversions::convertTransform(const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation)
+{
+
+  vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
+
+  double translation[3] = {origin(0), origin(1), origin(2)};
+  //rotation
+  Eigen::AngleAxisf angleAxis(orientation);
+  double theta = angleAxis.angle();
+  double axis[3] = {angleAxis.axis()(0), angleAxis.axis()(1), angleAxis.axis()(2)};
+
+  t->Identity();
+  t->Translate(translation);
+  t->RotateWXYZ(theta * 180./M_PI, axis);
+  return t;
+
+}
+
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud)
 {
@@ -170,7 +236,7 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
   if (transformed_cloud->is_dense)
   {
     for (vtkIdType i = 0; i < nr_points; ++i) {
-      float point[3] = {transformed_cloud->points[i].x, transformed_cloud->points[i].y, transformed_cloud->points[i].z}; 
+      float point[3] = {transformed_cloud->points[i].x, transformed_cloud->points[i].y, transformed_cloud->points[i].z};
       points->SetPoint(i, point);
     }
   }
@@ -180,12 +246,12 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
     for (vtkIdType i = 0; i < nr_points; ++i)
     {
       // Check if the point is invalid
-      if (!pcl_isfinite (transformed_cloud->points[i].x) || 
-          !pcl_isfinite (transformed_cloud->points[i].y) || 
+      if (!pcl_isfinite (transformed_cloud->points[i].x) ||
+          !pcl_isfinite (transformed_cloud->points[i].y) ||
           !pcl_isfinite (transformed_cloud->points[i].z))
         continue;
 
-      float point[3] = {transformed_cloud->points[i].x, transformed_cloud->points[i].y, transformed_cloud->points[i].z}; 
+      float point[3] = {transformed_cloud->points[i].x, transformed_cloud->points[i].y, transformed_cloud->points[i].z};
       points->SetPoint(j, point);
       j++;
     }
@@ -221,7 +287,7 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
   {
     for (vtkIdType i = 0; i < nr_points; ++i) {
       float point[3] = {transformed_cloud->points[i].x, transformed_cloud->points[i].y, transformed_cloud->points[i].z};
-      unsigned char color[3] = {transformed_cloud->points[i].r, transformed_cloud->points[i].g, transformed_cloud->points[i].b}; 
+      unsigned char color[3] = {transformed_cloud->points[i].r, transformed_cloud->points[i].g, transformed_cloud->points[i].b};
       points->SetPoint(i, point);
       rgbArray->SetTupleValue(i, color);
     }
@@ -232,8 +298,8 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
     for (vtkIdType i = 0; i < nr_points; ++i)
     {
       // Check if the point is invalid
-      if (!pcl_isfinite (transformed_cloud->points[i].x) || 
-          !pcl_isfinite (transformed_cloud->points[i].y) || 
+      if (!pcl_isfinite (transformed_cloud->points[i].x) ||
+          !pcl_isfinite (transformed_cloud->points[i].y) ||
           !pcl_isfinite (transformed_cloud->points[i].z))
         continue;
 
@@ -277,7 +343,7 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
   {
     for (vtkIdType i = 0; i < nr_points; ++i) {
       float point[3] = {transformed_cloud->points[i].x, transformed_cloud->points[i].y, transformed_cloud->points[i].z};
-      unsigned char color[3] = {transformed_cloud->points[i].r, transformed_cloud->points[i].g, transformed_cloud->points[i].b}; 
+      unsigned char color[3] = {transformed_cloud->points[i].r, transformed_cloud->points[i].g, transformed_cloud->points[i].b};
       points->SetPoint(i, point);
       rgbArray->SetTupleValue(i, color);
     }
@@ -288,8 +354,8 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPointCloud(pcl::Poin
     for (vtkIdType i = 0; i < nr_points; ++i)
     {
       // Check if the point is invalid
-      if (!pcl_isfinite (transformed_cloud->points[i].x) || 
-          !pcl_isfinite (transformed_cloud->points[i].y) || 
+      if (!pcl_isfinite (transformed_cloud->points[i].x) ||
+          !pcl_isfinite (transformed_cloud->points[i].y) ||
           !pcl_isfinite (transformed_cloud->points[i].z))
         continue;
 
