@@ -53,15 +53,6 @@ public:
 
   static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2 &cloud);
 
-  static vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(
-    pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud);
-
-  static vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud);
-
-  static vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(
-    pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud);
-
   static pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudFromPolyData(
     vtkPolyData* polyData);
 
