@@ -24,6 +24,7 @@
 #include <vtkObject.h>
 #include <vtkPCLFiltersModule.h>
 #include <vtkSmartPointer.h>
+#include <vtkTransform.h>
 
 #include <pcl/pcl_base.h>
 #include <pcl/point_cloud.h>
@@ -47,16 +48,10 @@ public:
 
   static vtkSmartPointer<vtkPolyData> PolyDataFromPCDFile(const std::string& filename);
 
+  static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2 &cloud, const Eigen::Vector4f &origin,
+                                                              const Eigen::Quaternionf& orientation);
+
   static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2 &cloud);
-
-  static vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(
-    pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud);
-
-  static vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud);
-
-  static vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(
-    pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud);
 
   static pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudFromPolyData(
     vtkPolyData* polyData);
@@ -79,6 +74,8 @@ private:
 
   vtkPCLConversions(const vtkPCLConversions&); // Not implemented
   void operator=(const vtkPCLConversions&); // Not implemented
+
+  static vtkSmartPointer<vtkTransform> convertTransform(const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation);
 };
 
 #endif
