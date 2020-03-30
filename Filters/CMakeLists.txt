@@ -24,6 +24,7 @@ set(headers
   vtkPCDReader.h
   vtkPCLConversions.h
   vtkPCLEuclideanClusterExtraction.h
+  vtkPCLFiltersModule.h
   vtkPCLNormalEstimation.h
   vtkPCLRadiusOutlierRemoval.h
   vtkPCLSACSegmentationCircle.h

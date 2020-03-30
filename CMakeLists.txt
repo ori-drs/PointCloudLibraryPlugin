@@ -14,6 +14,7 @@ find_package(VTK REQUIRED)
 
 catkin_package(
 INCLUDE_DIRS Filters
+CFG_EXTRAS pcl_plugin.cmake
 )
 
 include(${VTK_USE_FILE})
