@@ -25,7 +25,8 @@ function(wrap_python library_name sources)
   # mfallon: necessary? I think not
   #set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib/python2.7/site-packages")
 
-  install(TARGETS ${library_name}Python DESTINATION lib/python2.7/site-packages)
+  #install(TARGETS ${library_name}Python DESTINATION lib/python2.7/site-packages)
+  install(TARGETS ${library_name}Python DESTINATION lib/python2.7/dist-packages)
   install(TARGETS ${library_name}PythonD DESTINATION lib)
 
 endfunction()

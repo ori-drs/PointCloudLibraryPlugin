@@ -70,6 +70,10 @@ install(FILES
   ${headers}
   DESTINATION include/vtkPCLFilters)
 
+install(FILES
+  ${sources}
+  DESTINATION include/vtkPCLFilters)
+
 if(VTK_WRAP_PYTHON)
   include_directories(${VTK_PYTHON_INCLUDE_DIR})
   include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
@@ -78,5 +82,5 @@ endif()
 
 # mfallon:
 # Director needs to find this file in the python2.7/site-packages/vtkPCLFiltersPython.so
-set_target_properties(vtkPCLFiltersPython
-  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION}/../)
+#set_target_properties(vtkPCLFiltersPython
+#  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION}/../)
