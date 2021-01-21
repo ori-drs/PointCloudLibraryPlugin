@@ -48,6 +48,7 @@ set(VTK_LIBRARIES
   vtkFiltersExtraction
   vtkFiltersCore
   vtkCommonCore
+  vtkFiltersParallelDIY2
   )
 
 set(deps
@@ -82,5 +83,7 @@ endif()
 
 # mfallon:
 # Director needs to find this file in the python2.7/site-packages/vtkPCLFiltersPython.so
+
 #set_target_properties(vtkPCLFiltersPython
 #  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION}/../)
+
