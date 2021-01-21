@@ -47,6 +47,7 @@ set(VTK_LIBRARIES
   vtkFiltersExtraction
   vtkFiltersCore
   vtkCommonCore
+  vtkFiltersParallelDIY2
   )
 
 set(deps
