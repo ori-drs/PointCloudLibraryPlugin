@@ -21,6 +21,7 @@
 #include <vtkNew.h>
 #include <vtkIdList.h>
 #include <vtkCellArray.h>
+#include <vtkCellData.h>
 #include <vtkPoints.h>
 #include <vtkDoubleArray.h>
 #include <vtkFloatArray.h>
@@ -30,7 +31,6 @@
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/transforms.h>
-#include <pcl/io/vtk_lib_io.h>
 
 #include <cassert>
 
@@ -53,7 +53,7 @@ vtkPCLConversions::~vtkPCLConversions()
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPCDFile(const std::string& filename)
 {
   pcl::PCDReader reader;
-  pcl::PCLPointCloud2 cloud;
+  pcl::PCLPointCloud2Ptr cloud;
 
   int version;
   int type;
@@ -63,38 +63,135 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPCDFile(const std::s
 #if PCL_VERSION_COMPARE(<,1,6,0)
 
   int idx;
-  sensor_msgs::PointCloud2 cloud;
-  reader.readHeader(filename, cloud, origin, orientation, version, type, idx);
+  sensor_msgs::PointCloud2Ptr cloud;
+  reader.readHeader(filename, *cloud, origin, orientation, version, type, idx);
 
 #elif PCL_VERSION_COMPARE(<,1,7,0)
 
   unsigned int idx;
   int offset = 0;
-  sensor_msgs::PointCloud2 cloud;
-  reader.readHeader(filename, cloud, origin, orientation, version, type, idx, offset);
+  sensor_msgs::PointCloud2Ptr cloud;
+  reader.readHeader(filename, *cloud, origin, orientation, version, type, idx, offset);
 
 #else
 
   unsigned int idx;
   int offset = 0;
-  reader.readHeader(filename, cloud, origin, orientation, version, type, idx, offset);
+  reader.readHeader(filename, *cloud, origin, orientation, version, type, idx, offset);
 
 #endif
 
-  reader.read(filename, cloud);
+  reader.read(filename, *cloud);
   return ConvertPointCloud2ToVtk(cloud, origin, orientation);
 }
 
-vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCLPointCloud2& cloud)
+vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCLPointCloud2Ptr& cloud_in)
 {
-  vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-  pcl::PCLPointCloud2Ptr cloudPtr = boost::make_shared<pcl::PCLPointCloud2>(cloud);
-  pcl::io::pointCloudTovtkPolyData(cloudPtr, polyData);
-  return polyData;
+  vtkSmartPointer<vtkPolyData> poly_data = vtkSmartPointer<vtkPolyData>::New(); // OR poly_data->Reset();
+  pcl::PCLPointCloud2Ptr cloud = cloud_in;
+
+  // The vast majority of this function comes from pcl/io/vtk_lib_io.h, but because anymal repository version of
+  // pcl removes vtk, we cannot use the function that exists there because the headers don't exist.
+  // Add Points
+  std::size_t x_idx = pcl::getFieldIndex (*cloud, std::string ("x") );
+  vtkSmartPointer<vtkPoints> cloud_points = vtkSmartPointer<vtkPoints>::New ();
+  vtkSmartPointer<vtkCellArray> cloud_vertices = vtkSmartPointer<vtkCellArray>::New ();
+
+  vtkIdType pid[1];
+  for (std::size_t point_idx = 0; point_idx < cloud->width * cloud->height; point_idx ++)
+  {
+    float point[3];
+
+    int point_offset = (int (point_idx) * cloud->point_step);
+    int offset = point_offset + cloud->fields[x_idx].offset;
+    memcpy (&point, &cloud->data[offset], sizeof (float)*3);
+
+    pid[0] = cloud_points->InsertNextPoint (point);
+    cloud_vertices->InsertNextCell (1, pid);
+  }
+
+  //set the points and vertices we created as the geometry and topology of the polydata
+  poly_data->SetPoints (cloud_points);
+  poly_data->SetVerts (cloud_vertices);
+
+  // Add RGB
+  int rgb_idx = pcl::getFieldIndex (*cloud, "rgb");
+  if (rgb_idx != -1)
+  {
+    //std::cout << "Adding rgb" << std::endl;
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New ();
+
+    colors->SetNumberOfComponents (3);
+    colors->SetName ("rgb");
+
+    for (std::size_t point_idx = 0; point_idx < cloud->width * cloud->height; point_idx ++)
+    {
+      unsigned char bgr[3];
+
+      int point_offset = (int (point_idx) * cloud->point_step);
+      int offset = point_offset + cloud->fields[rgb_idx].offset;
+      memcpy (&bgr, &cloud->data[offset], sizeof (unsigned char)*3);
+
+      colors->InsertNextTuple3(bgr[2], bgr[1], bgr[0]);
+    }
+
+    poly_data->GetCellData()->SetScalars(colors);
+  }
+
+  // Add Intensity
+  int intensity_idx = pcl::getFieldIndex (*cloud, "intensity");
+  if (intensity_idx != -1)
+  {
+    //std::cout << "Adding intensity" << std::endl;
+    vtkSmartPointer<vtkFloatArray> cloud_intensity = vtkSmartPointer<vtkFloatArray>::New ();
+    cloud_intensity->SetNumberOfComponents (1);
+    cloud_intensity->SetName("intensity");
+
+    for (std::size_t point_idx = 0; point_idx < cloud->width * cloud->height; point_idx ++)
+    {
+      float intensity;
+
+      int point_offset = (int (point_idx) * cloud->point_step);
+      int offset = point_offset + cloud->fields[intensity_idx].offset;
+      memcpy (&intensity, &cloud->data[offset], sizeof(float));
+
+      cloud_intensity->InsertNextValue(intensity);
+    }
+
+    poly_data->GetCellData()->AddArray(cloud_intensity);
+    if (rgb_idx == -1)
+      poly_data->GetCellData()->SetActiveAttribute("intensity", vtkDataSetAttributes::SCALARS);
+  }
+
+  // Add Normals
+  int normal_x_idx = pcl::getFieldIndex (*cloud, std::string ("normal_x") );
+  if (normal_x_idx != -1)
+  {
+    //std::cout << "Adding normals" << std::endl;
+    vtkSmartPointer<vtkFloatArray> normals = vtkSmartPointer<vtkFloatArray>::New();
+    normals->SetNumberOfComponents(3); //3d normals (ie x,y,z)
+    normals->SetName("normals");
+
+    for (std::size_t point_idx = 0; point_idx < cloud->width * cloud->height; point_idx ++)
+    {
+      float normal[3];
+
+      int point_offset = (int (point_idx) * cloud->point_step);
+      int offset = point_offset + cloud->fields[normal_x_idx].offset;
+      memcpy (&normal, &cloud->data[offset], sizeof (float)*3);
+
+      normals->InsertNextTuple(normal);
+    }
+
+    poly_data->GetCellData()->SetNormals(normals);
+    //poly_data->GetCellData()->SetActiveAttribute("normals", vtkDataSetAttributes::SCALARS);
+  }
+
+  return poly_data;
 }
 
 
-vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCLPointCloud2& cloud,
+vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCLPointCloud2Ptr& cloud,
                                                                         const Eigen::Vector4f& origin,
                                                                         const Eigen::Quaternionf& orientation)
 {
@@ -226,8 +323,8 @@ void vtkPCLConversions::PerformPointCloudConversionBenchmark(vtkPolyData* polyDa
 
 
   start = vtkTimerLog::GetUniversalTime();
-  pcl::PCLPointCloud2 tempCloud2;
-  toPCLPointCloud2(*tempCloud, tempCloud2);
+  pcl::PCLPointCloud2Ptr tempCloud2;
+  toPCLPointCloud2(*tempCloud, *tempCloud2);
   vtkSmartPointer<vtkPolyData> tempPolyData = ConvertPointCloud2ToVtk(tempCloud2);
   elapsed = vtkTimerLog::GetUniversalTime() - start;
 

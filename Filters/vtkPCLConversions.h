@@ -48,10 +48,10 @@ public:
 
   static vtkSmartPointer<vtkPolyData> PolyDataFromPCDFile(const std::string& filename);
 
-  static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2 &cloud, const Eigen::Vector4f &origin,
+  static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2Ptr &cloud, const Eigen::Vector4f &origin,
                                                               const Eigen::Quaternionf& orientation);
 
-  static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2 &cloud);
+  static vtkSmartPointer<vtkPolyData> ConvertPointCloud2ToVtk(pcl::PCLPointCloud2Ptr &cloud);
 
   static pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudFromPolyData(
     vtkPolyData* polyData);

@@ -74,8 +74,8 @@ int vtkPCLVoxelGrid::RequestData(
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = vtkPCLConversions::PointCloudFromPolyData(input);
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFiltered = ApplyVoxelGrid(cloud, this->LeafSize);
-  pcl::PCLPointCloud2 cloudFiltered2;
-  toPCLPointCloud2(*cloudFiltered, cloudFiltered2);
+  pcl::PCLPointCloud2Ptr cloudFiltered2;
+  toPCLPointCloud2(*cloudFiltered, *cloudFiltered2);
 
   output->ShallowCopy(vtkPCLConversions::ConvertPointCloud2ToVtk(cloudFiltered2));
   return 1;
