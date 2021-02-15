@@ -26,7 +26,7 @@ function(wrap_python library_name sources)
   #set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib/python2.7/site-packages")
 
   #install(TARGETS ${library_name}Python DESTINATION lib/python2.7/site-packages)
-  install(TARGETS ${library_name}Python DESTINATION lib/python{PYTHON_VERSION_MAJOR}/dist-packages)
+  install(TARGETS ${library_name}Python DESTINATION lib/python${PYTHON_VERSION_MAJOR}/dist-packages)
   install(TARGETS ${library_name}PythonD DESTINATION lib)
 
 endfunction()
