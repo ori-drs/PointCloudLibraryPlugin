@@ -53,7 +53,7 @@ vtkPCLConversions::~vtkPCLConversions()
 vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPCDFile(const std::string& filename)
 {
   pcl::PCDReader reader;
-  pcl::PCLPointCloud2Ptr cloud;
+  pcl::PCLPointCloud2Ptr cloud(new pcl::PCLPointCloud2());
 
   int version;
   int type;
@@ -63,14 +63,14 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::PolyDataFromPCDFile(const std::s
 #if PCL_VERSION_COMPARE(<,1,6,0)
 
   int idx;
-  sensor_msgs::PointCloud2Ptr cloud;
+  sensor_msgs::PointCloud2Ptr cloud(new pcl::PCLPointCloud2());
   reader.readHeader(filename, *cloud, origin, orientation, version, type, idx);
 
 #elif PCL_VERSION_COMPARE(<,1,7,0)
 
   unsigned int idx;
   int offset = 0;
-  sensor_msgs::PointCloud2Ptr cloud;
+  sensor_msgs::PointCloud2Ptr cloud(new pcl::PCLPointCloud2());
   reader.readHeader(filename, *cloud, origin, orientation, version, type, idx, offset);
 
 #else
