@@ -323,7 +323,7 @@ void vtkPCLConversions::PerformPointCloudConversionBenchmark(vtkPolyData* polyDa
 
 
   start = vtkTimerLog::GetUniversalTime();
-  pcl::PCLPointCloud2Ptr tempCloud2;
+  pcl::PCLPointCloud2Ptr tempCloud2(new pcl::PCLPointCloud2());
   toPCLPointCloud2(*tempCloud, *tempCloud2);
   vtkSmartPointer<vtkPolyData> tempPolyData = ConvertPointCloud2ToVtk(tempCloud2);
   elapsed = vtkTimerLog::GetUniversalTime() - start;
