@@ -138,53 +138,34 @@ vtkSmartPointer<vtkPolyData> vtkPCLConversions::ConvertPointCloud2ToVtk(pcl::PCL
     poly_data->GetCellData()->SetScalars(colors);
   }
 
-  // Add Intensity
-  int intensity_idx = pcl::getFieldIndex (*cloud, "intensity");
-  if (intensity_idx != -1)
+  // Add other fields
+  for (size_t i = 0; i < cloud->fields.size(); ++i)
   {
-    //std::cout << "Adding intensity" << std::endl;
-    vtkSmartPointer<vtkFloatArray> cloud_intensity = vtkSmartPointer<vtkFloatArray>::New ();
-    cloud_intensity->SetNumberOfComponents (1);
-    cloud_intensity->SetName("intensity");
-
-    for (std::size_t point_idx = 0; point_idx < cloud->width * cloud->height; point_idx ++)
+    std::string field_name = cloud->fields[i].name;
+    int field_idx = pcl::getFieldIndex(*cloud, field_name);
+    
+    if (field_name == "x" || field_name == "y" || field_name == "z" || field_name == "rgb" )
+      continue;
+    
+    if (field_idx != -1)
     {
-      float intensity;
+      vtkSmartPointer<vtkFloatArray> cloud_data = vtkSmartPointer<vtkFloatArray>::New ();
+      cloud_data->SetNumberOfComponents (1);
+      cloud_data->SetName(field_name.c_str());
 
-      int point_offset = (int (point_idx) * cloud->point_step);
-      int offset = point_offset + cloud->fields[intensity_idx].offset;
-      memcpy (&intensity, &cloud->data[offset], sizeof(float));
+      for (std::size_t point_idx = 0; point_idx < cloud->width * cloud->height; point_idx ++)
+      {
+        float value;
 
-      cloud_intensity->InsertNextValue(intensity);
-    }
+        int point_offset = (int (point_idx) * cloud->point_step);
+        int offset = point_offset + cloud->fields[field_idx].offset;
+        memcpy (&value, &cloud->data[offset], sizeof(float));
+        cloud_data->InsertNextValue(value);
+      }
 
-    poly_data->GetCellData()->AddArray(cloud_intensity);
-    if (rgb_idx == -1)
-      poly_data->GetCellData()->SetActiveAttribute("intensity", vtkDataSetAttributes::SCALARS);
-  }
+      poly_data->GetPointData()->AddArray(cloud_data);
 
-  // Add Normals
-  int normal_x_idx = pcl::getFieldIndex (*cloud, std::string ("normal_x") );
-  if (normal_x_idx != -1)
-  {
-    //std::cout << "Adding normals" << std::endl;
-    vtkSmartPointer<vtkFloatArray> normals = vtkSmartPointer<vtkFloatArray>::New();
-    normals->SetNumberOfComponents(3); //3d normals (ie x,y,z)
-    normals->SetName("normals");
-
-    for (std::size_t point_idx = 0; point_idx < cloud->width * cloud->height; point_idx ++)
-    {
-      float normal[3];
-
-      int point_offset = (int (point_idx) * cloud->point_step);
-      int offset = point_offset + cloud->fields[normal_x_idx].offset;
-      memcpy (&normal, &cloud->data[offset], sizeof (float)*3);
-
-      normals->InsertNextTuple(normal);
-    }
-
-    poly_data->GetCellData()->SetNormals(normals);
-    //poly_data->GetCellData()->SetActiveAttribute("normals", vtkDataSetAttributes::SCALARS);
+     }
   }
 
   return poly_data;
